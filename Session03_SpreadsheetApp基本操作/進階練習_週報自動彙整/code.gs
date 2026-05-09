@@ -290,3 +290,4 @@ function onOpen() {
     .addItem("⏰ 設定週五自動彙整", "設定週五自動彙整")
     .addToUi();
 }
+

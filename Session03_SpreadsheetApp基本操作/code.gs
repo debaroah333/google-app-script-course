@@ -188,6 +188,119 @@ function 自動建立月報表() {
   }
 }
 
+/**
+ * 練習 1：自動建立週報表
+ * 說明：建立「週報表」，包含欄位：日期、事項、負責人、進度(%)
+ */
+function 自動建立週報表() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var 員工表 = ss.getSheetByName("員工資料");
+    
+    if (!員工表) {
+      SpreadsheetApp.getUi().alert("❌ 找不到「員工資料」工作表，請先點選「初始化員工資料」。");
+      return;
+    }
+
+    // 1. 取得員工姓名清單（作為負責人選項）
+    var 最後一列 = 員工表.getLastRow();
+    if (最後一列 < 2) {
+      SpreadsheetApp.getUi().alert("⚠️ 員工資料中沒有數據。");
+      return;
+    }
+    var 員工姓名 = 員工表.getRange(2, 1, 最後一列 - 1, 1).getValues();
+
+    // 2. 準備新工作表名稱 (例如：週報表_20260509)
+    var 今天 = new Date();
+    var 日期字串 = Utilities.formatDate(今天, "Asia/Taipei", "yyyyMMdd");
+    var 表名 = "週報表_" + 日期字串;
+
+    // 檢查工作表是否已存在
+    if (ss.getSheetByName(表名)) {
+      SpreadsheetApp.getUi().alert("⚠️ 「" + 表名 + "」已存在。");
+      return;
+    }
+
+    var 新表 = ss.insertSheet(表名);
+
+    // 3. 設定標題列與格式
+    var 標題 = [["日期", "事項", "負責人", "進度(%)"]];
+    新表.getRange("A1:D1").setValues(標題);
+    
+    var 標題範圍 = 新表.getRange("A1:D1");
+    標題範圍.setBackground("#4285f4").setFontColor("#ffffff").setFontWeight("bold").setHorizontalAlignment("center");
+
+    // 4. 產生範例事項內容
+    var 事項清單 = ["系統開發", "客戶會議", "文件撰寫", "測試除錯", "行政庶務"];
+    var 報表內容 = [];
+    var 格式化日期 = Utilities.formatDate(今天, "Asia/Taipei", "yyyy/MM/dd");
+
+    for (var i = 0; i < 事項清單.length; i++) {
+      var 事項 = 事項清單[i];
+      var 負責人 = 員工姓名[Math.floor(Math.random() * 員工姓名.length)][0];
+      var 進度 = Math.floor(Math.random() * 101); // 0~100
+      
+      報表內容.push([格式化日期, 事項, 負責人, 進度]);
+    }
+
+    // 寫入所有資料
+    新表.getRange(2, 1, 報表內容.length, 4).setValues(報表內容);
+
+    // 5. 最後修飾
+    新表.setFrozenRows(1); // 凍結首列
+    新表.getRange(2, 4, 報表內容.length, 1).setHorizontalAlignment("center"); // 進度居中
+    
+    for (var j = 1; j <= 4; j++) {
+      新表.autoResizeColumn(j);
+      var 目前寬度 = 新表.getColumnWidth(j);
+      新表.setColumnWidth(j, 目前寬度 + 30);
+    }
+
+    SpreadsheetApp.getUi().alert("✅ 「" + 表名 + "」建立完成！");
+
+  } catch (錯誤) {
+    Logger.log("❌ 錯誤：" + 錯誤.message);
+    SpreadsheetApp.getUi().alert("❌ 錯誤：" + 錯誤.message);
+  }
+}
+
+/**
+ * 練習 2：工作表複製
+ * 說明：將「員工資料」工作表複製一份，命名為「員工資料_備份_日期」
+ */
+function 複製員工資料備份() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("員工資料");
+  
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert("❌ 找不到「員工資料」工作表，無法進行備份。");
+    return;
+  }
+  
+  // 取得格式化日期 (例如 20260509)
+  var 今天 = new Date();
+  var 日期字串 = Utilities.formatDate(今天, "Asia/Taipei", "yyyyMMdd");
+  var 新工作表名稱 = "員工資料_備份_" + 日期字串;
+  
+  // 檢查是否已有同名的備份（避免錯誤）
+  var 既有表 = ss.getSheetByName(新工作表名稱);
+  if (既有表) {
+    SpreadsheetApp.getUi().alert("⚠️ 「" + 新工作表名稱 + "」已經存在。");
+    return;
+  }
+  
+  // 複製工作表
+  var 新表 = sheet.copyTo(ss);
+  新表.setName(新工作表名稱);
+  
+  // 將新工作表移到最後一個位置
+  ss.setActiveSheet(新表);
+  ss.moveActiveSheet(ss.getSheets().length);
+  
+  Logger.log("✅ 已成功備份為：" + 新工作表名稱);
+  SpreadsheetApp.getUi().alert("✅ 員工資料備份成功！\n名稱：" + 新工作表名稱);
+}
+
 // ============================================================
 // 第三部分：讀寫儲存格
 // ============================================================
@@ -464,8 +577,10 @@ function onOpen() {
     .addItem("📋 SpreadsheetApp 基本操作", "SpreadsheetApp基本操作")
     .addItem("📊 讀取工作表資訊", "讀取工作表資訊")
     .addItem("📝 讀寫儲存格示範", "讀寫儲存格示範")
+    .addItem("💾 複製員工資料備份", "複製員工資料備份")
     .addSeparator()
     .addItem("📅 建立當月報表", "自動建立月報表")
+    .addItem("📝 建立週報表", "自動建立週報表")
     .addItem("⏰ 設定每日觸發器", "設定每日觸發器")
     .addItem("🗑️ 刪除所有觸發器", "刪除所有觸發器")
     .addToUi();
